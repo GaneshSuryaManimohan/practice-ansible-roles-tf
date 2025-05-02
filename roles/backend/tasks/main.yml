@@ -7,30 +7,21 @@
 - name: Install nodejs and mysql
   ansible.builtin.dnf:
     name: "{{item}}"
-    state: latest
+    state: installed
   loop:
     - nodejs
     - mysql
 
-- name: adding user 
+- name: adding user expense
   ansible.builtin.user:
     name: expense
 
-- name: delete /app directory
-  ansible.builtin.file:
-    path: /app
-    state: absent
-  
-- name: create {{app_location}} directory
-  ansible.builtin.file:
-    path: /app
-    state: directory
-
-- name: download & extract {{component}} code
-  ansible.builtin.unarchive:
-    src: https://expense-builds.s3.us-east-1.amazonaws.com/expense-backend-v2.zip
-    dest: /app
-    remote_src: true
+- name: run app pre-requisites
+  tags:
+  - deployment
+  ansible.builtin.import_role:
+    name: common
+    tasks_from: app-pre-req
 
 - name: install npm dependencies
   ansible.builtin.command: npm install
@@ -41,6 +32,15 @@
   ansible.builtin.template:
     src: backend.service.j2
     dest: /etc/systemd/system/backend.service
+
+- name: daemon reload
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+
+- name: Enable backend service
+  ansible.builtin.service:
+    name: backend
+    enabled: yes
 
 - name: Install python mysql dependencies
   ansible.builtin.pip:
@@ -58,12 +58,10 @@
     state: import
     name: all
       
-- name: daemon reload
-  ansible.builtin.systemd_service:
-    daemon_reload: true
 
 - name: start and enable backend service
+  tags: 
+  - deployment
   ansible.builtin.service:
     name: backend
-    state: started
-    enabled: true
+    state: restarted
