@@ -1,8 +1,8 @@
 - name: configuring {{component}} server
-  hosts: localhost
+  hosts: all
   connection: local
   become: true
   vars_files:
-  - "variables-{{environment}}.yaml"
+  - "variables-{{env}}.yaml"
   roles:
    - "{{component}}"
